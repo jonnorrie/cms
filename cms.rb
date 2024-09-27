@@ -12,69 +12,139 @@ helpers do
   def render_markdown(text)
     markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML)
     # This is a new instance of Redcarpet
-    
     markdown.render(text)
+  end
+  
+  def load_file_content(path)
+    content = File.read(path)
+    # just displays text of given file
+    # => File.read("/home/ec2-user/environment/CMS/data/about.md")
+    
+    case File.extname(path)
+      # returns the extension of a file
+      # => ".md"
+    when ".txt"
+      headers["Content-Type"] = "text/plain"
+      content
+    when ".md"
+      erb render_markdown(content)
+    end
+          
   end
   
 end
 
-root = File.expand_path("..", __FILE__)
+def data_path
+  if ENV["RACK_ENV"] == "test"
+    File.expand_path("../test/data", __FILE__)
+      # "/home/ec2-user/environment/CMS/test/data"
+  else
+    File.expand_path("../data", __FILE__)
+      # =>"/home/ec2-user/environment/CMS/data"
+  end
+end
+
+
+# root = File.expand_path("..", __FILE__)
 # Returns a string of the directory
 # in reference to the file we are in.
 
-
+# -----------------------------------------------------------
 
 # Displays the index of files
 get "/" do
-  @files = Dir.glob(root + "/data/*").map do |path|
+  
+  pattern = File.join(data_path, "*")
+  # => "/home/ec2-user/environment/CMS/data/*"
+  #File.join returns a string with the second argument appended between a `/`
+  
+  
+  @files = Dir.glob(pattern).map do |path|
+    # => ["/home/ec2-user/environment/CMS/data/about.md], ["/home/ec2-user/environment/CMS/data/changes.txt"], [""/home/ec2-user/environment/CMS/data/changes.txt"]
     # Dir.glob returns an array of all paths directing to the files
     # in the given directory,
     # in this case the directory of our current file,
     # and then goes into the `data` directory as well
     File.basename(path)
+    # =>["about.md"], ["changes.txt"], ["history.txt"]
     # Returns just the file name of a given path.
     # `map` is putting the names of the files into another array
   end
-  
-  erb :index
+
+  erb :index, layout: :layout
 end
+
+# -----------------------------------------------------------
+
+# File edit page
+get "/:filename/edit" do
+  file_path =  File.join(data_path, params[:filename])
+  
+  @filename = params[:filename]
+  @content = File.read(file_path)
+  
+  erb :edit, layout: :layout
+end
+
+# -----------------------------------------------------------
+
+get "/new" do
+  erb :new, layout: :layout
+end
+
+# -----------------------------------------------------------
+
+post "/create" do
+  
+  if params[:filename].size == 0
+   
+    session[:message] = "A name is required"
+    
+    erb :new
+    
+  else
+    
+    
+    session[:message] = "#{params[:filename]} has been created."
+    
+    redirect "/"
+  end
+end
+
+# -----------------------------------------------------------
 
 #  Displays the selected file
 get "/:filename" do
   # the colon is used in sanatra routes to indicate that value
   # needs to be passed to the params hash
-  @files = Dir.glob(root + "/data/*").map do |path|
-    File.basename(path)
-  end
+  # about.md
   
-  if @files.include?(params[:filename])
-    file_path = root + "/data/" + params[:filename]
-     # `file_path` is just a string of the file path.
-      # params is a hash given to us through sinatra.
-      # when we type a URL with `:filename` being the name of a file,
-      # `:filename` becomes the key, and the file in the URL is the value.
-      # This allows us to dynamically handle the route without creating
-      # a route for every file
+  requested_file = params[:filename]
+  # about.md
   
-    if File.extname(file_path) == ".md"
-      #  if the file type is `.md` we render it in markdown
-    
-      file_text = File.read(file_path)
-    
-      render_markdown(file_text)
-    else
-
-      headers["Content-Type"] = "text/plain"
-      # This sets the content type header of the request 
-      # to just plain text.
-      
-      File.read(file_path)
-      # reads the `File.read` method with the file path passed in.
-    end
+  file_path = File.join(data_path, requested_file)
+  # "/home/ec2-user/environment/CMS/data" + "about.md"
+  # => "/home/ec2-user/environment/CMS/data/about.md"
+  
+  
+  if File.exist?(file_path)
+    load_file_content(file_path)
   else
     session[:message] = "#{params[:filename]} does not exist"
-    
     redirect "/"
   end
+end
+
+# -----------------------------------------------------------
+
+# submission for file edits
+post "/:filename" do
+  file_path = File.join(data_path, params[:filename])
   
+  File.write(file_path, params[:content])
+  
+  session[:message] = "#{params[:filename]} has been updated."
+  
+  redirect "/"
+
 end
