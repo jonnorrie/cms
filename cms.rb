@@ -76,7 +76,7 @@ end
 
 # -----------------------------------------------------------
 
-# File edit page
+# displays the file edit page
 get "/:filename/edit" do
   file_path =  File.join(data_path, params[:filename])
   
@@ -87,25 +87,29 @@ get "/:filename/edit" do
 end
 
 # -----------------------------------------------------------
-
+# displays the new file page
 get "/new" do
   erb :new, layout: :layout
 end
 
 # -----------------------------------------------------------
-
+# creates a new file
 post "/create" do
   
   if params[:filename].size == 0
    
     session[:message] = "A name is required"
     
-    erb :new
+    redirect "/new"
     
   else
+    file_path = File.join(data_path, params[:filename].to_s)
+    # => "/home/ec2-user/environment/CMS/data/new_doc.txt"
     
+    File.write(file_path, "")
+    # Creates a file at the given directory, with the contents of the second argument
     
-    session[:message] = "#{params[:filename]} has been created."
+    session[:message] = "'#{params[:filename]}' has been created."
     
     redirect "/"
   end
@@ -143,8 +147,22 @@ post "/:filename" do
   
   File.write(file_path, params[:content])
   
-  session[:message] = "#{params[:filename]} has been updated."
+  session[:message] = "'#{params[:filename]}' has been updated."
   
   redirect "/"
 
+end
+
+# -----------------------------------------------------------
+
+# deletes the file
+post "/:filename/delete_file" do
+  
+  path_to_given_file = File.join(data_path, params[:filename])
+  
+  File.delete(path_to_given_file)
+  
+  session[:message] = "'#{params[:filename]}' has been deleted."
+  
+  redirect "/"
 end

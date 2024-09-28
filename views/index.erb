@@ -7,16 +7,28 @@
   <% @files.each do |file| %>
   <!--Iterates through the array of filenames
   and creates a list of links to the files-->
+  
+  <div>
     
     <li>
       <a href="/<%= file %>"><%= file %></a>
       <a href="/<%= file %>/edit">Edit</a>
+      <!-- this href is stored in a list item -->
+      <!-- href references a URL, and then uses some
+      text to store that url in a link.-->
+      
+      
+      <form class="inline" action="/<%= file %>/delete_file" method="post">
+        <button type="submit">Delete</button>
+      </form>
+      
+      <!-- forms are a container for user inputs, such as text boxes and buttons -->
     </li>
-    <!-- this href is stored in a list item -->
-    <!-- href references a URL, and then uses some
-    text to store that url in a link.-->
+    
+  </div>
+
       
   <% end %>
-  
-  <a href="/new">New Document</a>
 </ul>
+
+  <p><a href="/new">New Document</a></p>
