@@ -1,6 +1,8 @@
 require "sinatra"
 require "sinatra/reloader"
 require "redcarpet" #Used to render Markdown text into HTML
+require "yaml"
+require "bcrypt"
 
 configure do
   enable :sessions
@@ -30,6 +32,33 @@ helpers do
       erb render_markdown(content)
     end
           
+  end
+  
+  def valid_credentials?(username, password)
+    credentials = YAML.load_file(yaml_path)
+    
+    if credentials.key?(username)
+    
+      encrypted_password = BCrypt::Password.create(credentials[username])
+      encrypted_password == password
+    else
+      false
+    end
+  end
+  
+  def signin_status
+    session[:signin_status]
+  end
+  
+  def restricted?
+    if signin_status != true
+      session[:message] = "You must be signed in to do that."
+      redirect "/"
+    end
+  end
+  
+  def yaml_path
+    File.expand_path("../users.yml", __FILE__)
   end
   
 end
@@ -78,6 +107,7 @@ end
 
 # displays the file edit page
 get "/:filename/edit" do
+  restricted?
   file_path =  File.join(data_path, params[:filename])
   
   @filename = params[:filename]
@@ -89,12 +119,14 @@ end
 # -----------------------------------------------------------
 # displays the new file page
 get "/new" do
+  restricted?
   erb :new, layout: :layout
 end
 
 # -----------------------------------------------------------
 # creates a new file
 post "/create" do
+  restricted?
   
   if params[:filename].size == 0
    
@@ -142,7 +174,9 @@ end
 # -----------------------------------------------------------
 
 # submission for file edits
-post "/:filename" do
+post "/:filename/update" do
+  restricted?
+  
   file_path = File.join(data_path, params[:filename])
   
   File.write(file_path, params[:content])
@@ -158,11 +192,47 @@ end
 # deletes the file
 post "/:filename/delete_file" do
   
-  path_to_given_file = File.join(data_path, params[:filename])
+  restricted?
   
-  File.delete(path_to_given_file)
+    path_to_given_file = File.join(data_path, params[:filename])
+    
+    File.delete(path_to_given_file)
+    
+    session[:message] = "'#{params[:filename]}' has been deleted."
+    
+    redirect "/"
+end
+
+# -----------------------------------------------------------
+
+# sign in page
+get "/users/signin" do
+  erb :signin, layout: :layout
+end
+
+# -----------------------------------------------------------
+
+# signs the user in
+post "/users/signin" do
   
-  session[:message] = "'#{params[:filename]}' has been deleted."
+  if valid_credentials?(params[:username], params[:password])
+    session[:username ] = params[:username]
+    session[:signin_status] = true
+    session[:message] = "Welcome!"
+    redirect "/"
+  else
+    session[:message] = "Invalid Username or Password"
+    erb :signin, layout: :layout
+  end
+  
+end
+
+
+#signs the user out
+post "/users/signout" do
+  
+  session[:signin_status] = false
+  session[:message] = "You have been signed out"
   
   redirect "/"
 end

@@ -8,8 +8,6 @@
   <!--Iterates through the array of filenames
   and creates a list of links to the files-->
   
-  <div>
-    
     <li>
       <a href="/<%= file %>"><%= file %></a>
       <a href="/<%= file %>/edit">Edit</a>
@@ -24,11 +22,19 @@
       
       <!-- forms are a container for user inputs, such as text boxes and buttons -->
     </li>
-    
-  </div>
 
       
   <% end %>
+  
 </ul>
 
-  <p><a href="/new">New Document</a></p>
+<p><a href="/new">New Document</a></p>
+
+<% if session[:signin_status] == true %>
+  <form action="/users/signout" method="post">
+    <p>Signed in as '<%=session[:username]%>'.</p>
+    <button>Sign Out</button>
+  </form>
+<% else %>
+  <p><a href="/users/signin">Sign In<a></p>
+<% end%>
